@@ -1,0 +1,90 @@
+C++
+#include <SPI.h>
+#include <SD.h>
+
+const int chipSelect = 4; // SD Card CS pin (Hardware SPI)
+const int xPin = A0;      // Accelerometer X-axis
+const int yPin = A1;      // Accelerometer Y-axis
+const int zPin = A2;      // Accelerometer Z-axis
+
+void setup() {
+    Serial.begin(9600);
+    
+    // Initialize the SD card module via SPI bus
+    if (!SD.begin(chipSelect)) {
+        Serial.println("Error: SD Card initialization failed!");
+        return;
+    }
+    Serial.println("SD Card ready. Starting data log...");
+    
+    // Create or append file, then write the CSV header row
+    File dataFile = SD.open("datalog.csv", FILE_WRITE);
+    if (dataFile) {
+        dataFile.println("Time_ms,Raw_X,Raw_Y,Raw_Z");
+        dataFile.close(); // Save and close buffer
+    }
+}
+
+void loop() {
+    unsigned long timeStamp = millis(); // Milliseconds since execution
+    int xVal = analogRead(xPin);
+    int yVal = analogRead(yPin);
+    int zVal = analogRead(zPin);
+
+    // Log continuous data in CSV format
+    File dataFile = SD.open("datalog.csv", FILE_WRITE);
+    if (dataFile) {
+        dataFile.print(timeStamp);
+        dataFile.print(",");
+        dataFile.print(xVal);
+        dataFile.print(",");
+        dataFile.print(yVal);
+        dataFile.print(",");
+        dataFile.println(zVal);
+        
+        dataFile.close(); // Flushes data from RAM buffer to physical SD storage
+    }
+    
+    delay(50); // 20 Hz logging frequency
+}
+
+Serial Telemetry Cpp, Arduino
+C++
+const int xPin = A0; // Accelerometer X-axis analog pin
+const int yPin = A1; // Accelerometer Y-axis analog pin
+const int zPin = A2; // Accelerometer Z-axis analog pin
+
+// Linear transformation function: Converts 10-bit raw ADC to physical g-force
+double convertToG(int rawAnalog) {
+    // 5.0V system baseline; sensor outputs 1.65V at 0g
+    double voltage = (rawAnalog / 1023.0) * 5.0;
+    double gForce = (voltage - 1.65) / 0.330; // 330 mV/g sensitivity scale factor
+    return gForce;
+}
+
+void setup() {
+    Serial.begin(115200); // High-speed baud rate for live transmission
+    
+    // Print CSV header row over serial line
+    Serial.println("Time_ms,Accel_X_g,Accel_Y_g,Accel_Z_g");
+}
+
+void loop() {
+    unsigned long timeStamp = millis();
+    
+    // Convert analog voltage signals to acceleration metrics
+    double ax = convertToG(analogRead(xPin));
+    double ay = convertToG(analogRead(yPin));
+    double az = convertToG(analogRead(zPin));
+
+    // Stream formatted telemetry data line
+    Serial.print(timeStamp);
+    Serial.print(",");
+    Serial.print(ax, 2);
+    Serial.print(",");
+    Serial.print(ay, 2);
+    Serial.print(",");
+    Serial.println(az, 2);
+
+    delay(20); // 50 Hz streaming refresh rate
+}
