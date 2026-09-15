@@ -1,0 +1,39 @@
+C++
+const int xPin = A0; // Accelerometer X-axis analog pin
+const int yPin = A1; // Accelerometer Y-axis analog pin
+const int zPin = A2; // Accelerometer Z-axis analog pin
+
+// Linear transformation function: Converts 10-bit raw ADC to physical g-force
+double convertToG(int rawAnalog) {
+    // 5.0V system baseline; sensor outputs 1.65V at 0g
+    double voltage = (rawAnalog / 1023.0) * 5.0;
+    double gForce = (voltage - 1.65) / 0.330; // 330 mV/g sensitivity scale factor
+    return gForce;
+}
+
+void setup() {
+    Serial.begin(115200); // High-speed baud rate for live transmission
+    
+    // Print CSV header row over serial line
+    Serial.println("Time_ms,Accel_X_g,Accel_Y_g,Accel_Z_g");
+}
+
+void loop() {
+    unsigned long timeStamp = millis();
+    
+    // Convert analog voltage signals to acceleration metrics
+    double ax = convertToG(analogRead(xPin));
+    double ay = convertToG(analogRead(yPin));
+    double az = convertToG(analogRead(zPin));
+
+    // Stream formatted telemetry data line
+    Serial.print(timeStamp);
+    Serial.print(",");
+    Serial.print(ax, 2);
+    Serial.print(",");
+    Serial.print(ay, 2);
+    Serial.print(",");
+    Serial.println(az, 2);
+
+    delay(20); // 50 Hz streaming refresh rate
+}
